@@ -1,0 +1,170 @@
+import customtkinter as ctk
+import webbrowser
+from fractions import Fraction
+
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
+
+MAX_FRACTIONS = 5
+MIN_FRACTIONS = 2
+
+class FractionBlock:
+    def __init__(self, parent):
+        self.frame = ctk.CTkFrame(parent)
+        self.frame.pack(side="left", padx=5)
+
+        self.whole = ctk.CTkEntry(self.frame, width=50, justify="center")
+        self.whole.insert(0, "0")
+        self.whole.pack(side="left", padx=(0, 5))
+
+        frac_frame = ctk.CTkFrame(self.frame)
+        frac_frame.pack(side="left")
+
+        self.num = ctk.CTkEntry(frac_frame, width=50, justify="center")
+        self.num.insert(0, "0")
+        self.num.pack()
+
+        self.den = ctk.CTkEntry(frac_frame, width=50, justify="center")
+        self.den.insert(0, "1")
+        self.den.pack(pady=(2, 0))
+
+    def get_fraction(self):
+        whole = int(self.whole.get() or 0)
+        num = int(self.num.get() or 0)
+        den = int(self.den.get() or 1)
+
+        return Fraction(whole * den + num, den)
+
+
+class OperationBlock:
+    def __init__(self, parent):
+        self.menu = ctk.CTkOptionMenu(
+            parent,
+            values=["+", "-", "*", "/"],
+            width=60
+        )
+        self.menu.set("+")
+        self.menu.pack(side="left", padx=10)
+
+    def get(self):
+        return self.menu.get()
+
+
+class App(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("Калькулятор дробей")
+        self.geometry("1050x380")
+        self.resizable(False, False)
+
+        self.main_frame = ctk.CTkFrame(self)
+        self.main_frame.pack(pady=20)
+
+        self.fractions = []
+        self.operations = []
+
+        # старт: 2 дроби + 1 операция
+        self.add_fraction()
+        self.add_operation()
+        self.add_fraction()
+
+        buttons_frame = ctk.CTkFrame(self)
+        buttons_frame.pack(pady=10)
+
+        self.add_btn = ctk.CTkButton(
+            buttons_frame,
+            text="Добавить дробь",
+            width=220,
+            command=self.add_fraction_with_operation
+        )
+        self.add_btn.pack(side="left", padx=5)
+
+        self.remove_btn = ctk.CTkButton(
+            buttons_frame,
+            text="Удалить дробь",
+            width=220,
+            command=self.remove_fraction
+        )
+        self.remove_btn.pack(side="left", padx=5)
+
+        self.calc_btn = ctk.CTkButton(
+            self,
+            text="Вычислить",
+            width=300,
+            command=self.calculate
+        )
+        self.calc_btn.pack(pady=5)
+
+        self.result = ctk.CTkLabel(self, text="Ответ:", font=("Arial", 20))
+        self.result.pack(pady=15)
+
+        def link(event=None):
+            webbrowser.open("https://tuseloryy.carrd.co/")
+
+        link_font = ctk.CTkFont(underline=True, family="Comic Sans MS", size=13)
+        self.credits = ctk.CTkLabel(self, text="Click here for more", font=link_font, text_color="grey", cursor="hand2")
+        self.credits.pack(side="bottom")
+        self.credits.bind("<Button-1>", link)
+        self.credits_link = ctk.CTkLabel(self, text="Made by Tuseloryy", text_color="grey")
+        self.credits_link.pack(side="bottom")
+
+    def add_fraction(self):
+        block = FractionBlock(self.main_frame)
+        self.fractions.append(block)
+
+    def add_operation(self):
+        op = OperationBlock(self.main_frame)
+        self.operations.append(op)
+
+    def add_fraction_with_operation(self):
+        if len(self.fractions) >= MAX_FRACTIONS:
+            return
+        self.add_operation()
+        self.add_fraction()
+
+    def remove_fraction(self):
+        if len(self.fractions) <= MIN_FRACTIONS:
+            return
+
+        # удалить последнюю дробь
+        frac = self.fractions.pop()
+        frac.frame.destroy()
+
+        # удалить операцию перед ней
+        op = self.operations.pop()
+        op.menu.destroy()
+
+    def calculate(self):
+        try:
+            result = self.fractions[0].get_fraction()
+
+            for i in range(len(self.operations)):
+                op = self.operations[i].get()
+                value = self.fractions[i + 1].get_fraction()
+
+                if op == "+":
+                    result += value
+                elif op == "-":
+                    result -= value
+                elif op == "*":
+                    result *= value
+                elif op == "/":
+                    result /= value
+
+            whole = result.numerator // result.denominator
+            rem = abs(result.numerator) % result.denominator
+
+            if rem == 0:
+                text = f"{whole}"
+            else:
+                text = f"{whole} {rem}/{result.denominator}"
+
+            self.result.configure(text=f"Ответ: {text}")
+
+        except Exception:
+            self.result.configure(text="Ошибка ввода")
+
+
+if __name__ == "__main__":
+    app = App()
+    app.mainloop()
